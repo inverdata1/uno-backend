@@ -1,0 +1,194 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                  String     @id @default(uuid())
+  email               String     @unique
+  password            String?
+  displayName         String?
+  firstName           String?
+  lastName            String?
+  phone               String?
+  dateOfBirth         String?
+  preferences         Json?
+  userTypes           Json?      // Guarda los estados de cada rol (client, business, delivery)
+  currentUserType     String?
+  currentBusinessId   String?
+  currentBusiness     Business?  @relation("UserCurrentBusiness", fields: [currentBusinessId], references: [id])
+  currentBranchId     String?
+  currentBranch       Branch?    @relation("UserCurrentBranch", fields: [currentBranchId], references: [id])
+  lastUserTypeSwitch  DateTime?
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  ownedBusinesses     Business[] @relation("BusinessOwner")
+  posts               Post[]
+  addresses           Address[]
+  favorites           Favorite[]
+  follows             Follow[]
+}
+
+model Business {
+  id              String     @id @default(uuid())
+  ownerId         String
+  owner           User       @relation("BusinessOwner", fields: [ownerId], references: [id])
+  businessName    String
+  businessType    String?
+  category        String?
+  isActive        Boolean    @default(true)
+  isVerified      Boolean    @default(false)
+  isFeatured      Boolean    @default(false)
+  followersCount  Int        @default(0)
+  rating          Decimal    @default(0.0) @db.Decimal(3, 2)
+  reviewsCount    Int        @default(0)
+  logoUrl         String?
+  bannerUrl       String?
+  status          String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  branches        Branch[]
+  products        Product[]
+  posts           Post[]
+  followers       Follow[]
+  usersCurrentlyHere User[]  @relation("UserCurrentBusiness")
+}
+
+model Branch {
+  id              String     @id @default(uuid())
+  businessId      String
+  business        Business   @relation(fields: [businessId], references: [id])
+  name            String
+  isMain          Boolean    @default(false)
+  isActive        Boolean    @default(true)
+  address         Json?
+  phone           String?
+  status          String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  usersCurrentlyHere User[]  @relation("UserCurrentBranch")
+}
+
+model Category {
+  id              String     @id @default(uuid())
+  name            String
+  iconUrl         String?
+  productCount    Int        @default(0)
+
+  products        Product[]
+}
+
+model Product {
+  id              String     @id @default(uuid())
+  businessId      String
+  business        Business   @relation(fields: [businessId], references: [id])
+  categoryId      String?
+  category        Category?  @relation(fields: [categoryId], references: [id])
+  name            String
+  description     String?
+  price           Decimal    @db.Decimal(10, 2)
+  compareAtPrice  Decimal?   @db.Decimal(10, 2)
+  currency        String     @default("USD")
+  stock           Int        @default(0)
+  trackInventory  Boolean    @default(false)
+  hasVariants     Boolean    @default(false)
+  thumbnailUrl    String?
+  images          Json?
+  isActive        Boolean    @default(true)
+  isAvailable     Boolean    @default(true)
+  isFeatured      Boolean    @default(false)
+  viewCount       Int        @default(0)
+  favoriteCount   Int        @default(0)
+  orderCount      Int        @default(0)
+  rating          Decimal    @default(0.0) @db.Decimal(3, 2)
+  reviewCount     Int        @default(0)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+}
+
+model Post {
+  id              String     @id @default(uuid())
+  businessId      String
+  business        Business   @relation(fields: [businessId], references: [id])
+  userId          String
+  user            User       @relation(fields: [userId], references: [id])
+  type            String     // image, video, carousel
+  caption         String?
+  media           Json?      // Arreglo con URLs y metadatos
+  thumbnailUrl    String?
+  isActive        Boolean    @default(true)
+  isPublished     Boolean    @default(false)
+  isPinned        Boolean    @default(false)
+  likeCount       Int        @default(0)
+  commentCount    Int        @default(0)
+  shareCount      Int        @default(0)
+  viewCount       Int        @default(0)
+  saveCount       Int        @default(0)
+  keywords        Json?
+  mentions        Json?
+  taggedProducts  Json?      // Guarda {productId, position: {x,y}}
+  publishedAt     DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+}
+
+model Address {
+  id              String         @id @default(uuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id])
+  typeId          String
+  type            AddressType    @relation(fields: [typeId], references: [id])
+  stateId         String
+  state           VenezuelanState @relation(fields: [stateId], references: [id])
+  city            String
+  street          String
+  details         String?
+  latitude        Decimal?
+  longitude       Decimal?
+  isDefault       Boolean        @default(false)
+}
+
+model AddressType {
+  id              String     @id @default(uuid())
+  name            String
+  icon            String?
+  addresses       Address[]
+}
+
+model VenezuelanState {
+  id              String     @id @default(uuid())
+  name            String
+  addresses       Address[]
+}
+
+model Favorite {
+  id              String     @id @default(uuid())
+  userId          String
+  user            User       @relation(fields: [userId], references: [id])
+  entityId        String     // Polymorphic UUID
+  entityType      String     // product or business
+  createdAt       DateTime   @default(now())
+
+  @@unique([userId, entityId, entityType])
+}
+
+model Follow {
+  id              String     @id @default(uuid())
+  followerId      String
+  follower        User       @relation(fields: [followerId], references: [id])
+  followingId     String
+  following       Business   @relation(fields: [followingId], references: [id])
+  createdAt       DateTime   @default(now())
+
+  @@unique([followerId, followingId])
+}
