@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Req } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Patch, Param, Delete, Req, Query, BadRequestException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -24,16 +24,17 @@ export class UsersController {
     };
   }
 
+  @Put('profile')
+  async updateProfile(@Query('userId') userId: string, @Body() body: any) {
+    if (!userId) {
+      throw new BadRequestException('userId is required');
+    }
+    return this.usersService.updateProfile(userId, body);
+  }
+
   @Get('user-types')
   getUserTypes(@Req() req) {
-    // Retornamos la estructura de roles que espera el frontend
-    return {
-      currentUserType: 'client',
-      currentContext: { businessId: null, branchId: null },
-      availableUserTypes: ['client'],
-      userTypes: { client: { status: 'active' } },
-      businessContexts: []
-    };
+    return this.usersService.getUserTypes(req.user.sub);
   }
 
   @Get()

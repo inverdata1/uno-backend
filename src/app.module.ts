@@ -9,6 +9,9 @@ import { BusinessesModule } from './businesses/businesses.module';
 import { ProductsModule } from './products/products.module';
 import { JwtAuthGuard } from './auth/jwt.guard';
 import { AuthModule } from './auth/auth.module';
+import { AddressTypesModule } from './address-types/address-types.module';
+import { VenezuelanStatesModule } from './venezuelan-states/venezuelan-states.module';
+import { AddressesModule } from './addresses/addresses.module';
 
 @Module({
   imports: [
@@ -20,6 +23,9 @@ import { AuthModule } from './auth/auth.module';
     BusinessesModule,
     ProductsModule,
     AuthModule,
+    AddressTypesModule,
+    VenezuelanStatesModule,
+    AddressesModule,
   ],
   controllers: [AppController],
   providers: [
