@@ -1,14 +1,40 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Post, Body, Delete, Patch, Query, Put } from '@nestjs/common';
+import { PostsService } from './posts.service';
 
 @Controller('posts')
 export class PostsController {
+  constructor(private readonly postsService: PostsService) {}
+
+  @Post()
+  create(@Body() data: any) {
+    return this.postsService.create(data);
+  }
+
   @Get()
-  findAll() {
-    return [];
+  findAll(@Query('businessId') businessId?: string) {
+    if (businessId) {
+      return this.postsService.findByBusiness(businessId);
+    }
+    return this.postsService.findAll();
   }
 
   @Get('business/:businessId')
   findByBusiness(@Param('businessId') businessId: string) {
-    return [];
+    return this.postsService.findByBusiness(businessId);
+  }
+
+  @Patch(':id/like')
+  like(@Param('id') id: string) {
+    return this.postsService.like(id);
+  }
+
+  @Delete(':id')
+  delete(@Param('id') id: string) {
+    return this.postsService.delete(id);
+  }
+
+  @Put(':id')
+  update(@Param('id') id: string, @Body() data: any) {
+    return this.postsService.update(id, data);
   }
 }

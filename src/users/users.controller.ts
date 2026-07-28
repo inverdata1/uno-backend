@@ -38,8 +38,9 @@ export class UsersController {
   }
 
   @Get('user-types')
-  getUserTypes(@Req() req) {
-    return this.usersService.getUserTypes(req.user.sub);
+  getUserTypes(@Query('userId') userId: string) {
+    if (!userId) throw new BadRequestException('userId is required');
+    return this.usersService.getUserTypes(userId);
   }
 
   @Get('fix-business-users')

@@ -32,6 +32,7 @@ model User {
 
   ownedBusinesses     Business[] @relation("BusinessOwner")
   posts               Post[]
+  stories             Story[]
   addresses           Address[]
   favorites           Favorite[]
   follows             Follow[]
@@ -62,6 +63,7 @@ model Business {
   branches        Branch[]
   products        Product[]
   posts           Post[]
+  stories         Story[]
   followers       Follow[]
   usersCurrentlyHere User[]  @relation("UserCurrentBusiness")
   orders          Order[]
@@ -133,6 +135,7 @@ model Post {
   userId          String
   user            User       @relation(fields: [userId], references: [id])
   type            String     // image, video, carousel
+  title           String?
   caption         String?
   media           Json?      // Arreglo con URLs y metadatos
   thumbnailUrl    String?
@@ -148,6 +151,24 @@ model Post {
   mentions        Json?
   taggedProducts  Json?      // Guarda {productId, position: {x,y}}
   publishedAt     DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+}
+
+model Story {
+  id              String     @id @default(uuid())
+  businessId      String
+  business        Business   @relation(fields: [businessId], references: [id])
+  userId          String
+  user            User       @relation(fields: [userId], references: [id])
+  mediaUrl        String
+  mediaType       String     // image, video
+  thumbnailUrl    String?
+  duration        Int?       // For videos
+  tags            Json?
+  viewCount       Int        @default(0)
+  expiresAt       DateTime
+  isActive        Boolean    @default(true)
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 }
