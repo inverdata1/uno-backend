@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Put, Delete, Body, Query, Param, ParseUUIDPipe, BadRequestException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Query,
+  Param,
+  ParseUUIDPipe,
+  BadRequestException,
+} from '@nestjs/common';
 import { AddressesService } from './addresses.service';
 
 @Controller('addresses')
@@ -27,27 +38,30 @@ export class AddressesController {
   update(
     @Query('id', ParseUUIDPipe) id: string,
     @Query('userId') userId: string,
-    @Body() data: any
+    @Body() data: any,
   ) {
-    if (!userId || !id) throw new BadRequestException('userId and id are required');
+    if (!userId || !id)
+      throw new BadRequestException('userId and id are required');
     return this.addressesService.update(id, userId, data);
   }
 
   @Delete('id')
   remove(
     @Query('id', ParseUUIDPipe) id: string,
-    @Query('userId') userId: string
+    @Query('userId') userId: string,
   ) {
-    if (!userId || !id) throw new BadRequestException('userId and id are required');
+    if (!userId || !id)
+      throw new BadRequestException('userId and id are required');
     return this.addressesService.remove(id, userId);
   }
 
   @Post('id/set_default')
   setDefault(
     @Query('id', ParseUUIDPipe) id: string,
-    @Query('userId') userId: string
+    @Query('userId') userId: string,
   ) {
-    if (!userId || !id) throw new BadRequestException('userId and id are required');
+    if (!userId || !id)
+      throw new BadRequestException('userId and id are required');
     return this.addressesService.setDefault(id, userId);
   }
 }

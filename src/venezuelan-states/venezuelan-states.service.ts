@@ -14,7 +14,7 @@ export class VenezuelanStatesService {
         { id: '2', name: 'Distrito Capital' },
         { id: '3', name: 'Miranda' },
         { id: '4', name: 'Carabobo' },
-        { id: '5', name: 'Aragua' }
+        { id: '5', name: 'Aragua' },
       ];
     }
     return states;

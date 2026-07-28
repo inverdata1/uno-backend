@@ -35,6 +35,7 @@ model User {
   addresses           Address[]
   favorites           Favorite[]
   follows             Follow[]
+  clientOrders        Order[]    @relation("ClientOrders")
 }
 
 model Business {
@@ -44,6 +45,8 @@ model Business {
   businessName    String
   businessType    String?
   category        String?
+  description     String?
+  businessHours   String?
   isActive        Boolean    @default(true)
   isVerified      Boolean    @default(false)
   isFeatured      Boolean    @default(false)
@@ -61,6 +64,8 @@ model Business {
   posts           Post[]
   followers       Follow[]
   usersCurrentlyHere User[]  @relation("UserCurrentBusiness")
+  orders          Order[]
+  categories      Category[]
 }
 
 model Branch {
@@ -71,16 +76,21 @@ model Branch {
   isMain          Boolean    @default(false)
   isActive        Boolean    @default(true)
   address         Json?
+  latitude        Decimal?
+  longitude       Decimal?
   phone           String?
   status          String?
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
   usersCurrentlyHere User[]  @relation("UserCurrentBranch")
+  orders             Order[]
 }
 
 model Category {
   id              String     @id @default(uuid())
+  businessId      String
+  business        Business   @relation(fields: [businessId], references: [id])
   name            String
   iconUrl         String?
   productCount    Int        @default(0)
@@ -97,10 +107,9 @@ model Product {
   name            String
   description     String?
   price           Decimal    @db.Decimal(10, 2)
-  compareAtPrice  Decimal?   @db.Decimal(10, 2)
+  discountPrice   Decimal?   @db.Decimal(10, 2)
   currency        String     @default("USD")
-  stock           Int        @default(0)
-  trackInventory  Boolean    @default(false)
+  isDiscountActive Boolean   @default(false)
   hasVariants     Boolean    @default(false)
   thumbnailUrl    String?
   images          Json?
@@ -114,6 +123,7 @@ model Product {
   reviewCount     Int        @default(0)
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
+  orderItems      OrderItem[]
 }
 
 model Post {
@@ -191,4 +201,41 @@ model Follow {
   createdAt       DateTime   @default(now())
 
   @@unique([followerId, followingId])
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  orderNumber     String      @unique
+  clientId        String
+  client          User        @relation("ClientOrders", fields: [clientId], references: [id])
+  businessId      String
+  business        Business    @relation(fields: [businessId], references: [id])
+  branchId        String?
+  branch          Branch?     @relation(fields: [branchId], references: [id])
+  status          String      @default("pending")
+  totalAmount     Decimal     @db.Decimal(10, 2)
+  subtotal        Decimal     @db.Decimal(10, 2)
+  deliveryFee     Decimal     @default(0.0) @db.Decimal(10, 2)
+  deliveryAddress Json?
+  paymentMethod   String?
+  paymentStatus   String      @default("pending")
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  items           OrderItem[]
+}
+
+model OrderItem {
+  id              String      @id @default(uuid())
+  orderId         String
+  order           Order       @relation(fields: [orderId], references: [id])
+  productId       String
+  product         Product     @relation(fields: [productId], references: [id])
+  quantity        Int         @default(1)
+  unitPrice       Decimal     @db.Decimal(10, 2)
+  totalPrice      Decimal     @db.Decimal(10, 2)
+  options         Json?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 }

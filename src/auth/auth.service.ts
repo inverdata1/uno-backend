@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
@@ -7,13 +11,13 @@ import * as bcrypt from 'bcrypt';
 export class AuthService {
   constructor(
     private prisma: PrismaService,
-    private jwtService: JwtService
+    private jwtService: JwtService,
   ) {}
 
   async register(data: any) {
     // Check if email already exists
     const existingUser = await this.prisma.user.findUnique({
-      where: { email: data.email }
+      where: { email: data.email },
     });
 
     if (existingUser) {
@@ -32,12 +36,12 @@ export class AuthService {
       data: {
         ...rest,
         password: hashedPassword,
-      }
+      },
     });
 
     // Remove password from response
     const { password: _, ...result } = user;
-    
+
     // Auto-login after register
     const payload = { sub: user.id, email: user.email };
     return {
@@ -48,7 +52,7 @@ export class AuthService {
 
   async login(email: string, pass: string) {
     const user = await this.prisma.user.findUnique({
-      where: { email }
+      where: { email },
     });
 
     if (!user) {
@@ -62,7 +66,7 @@ export class AuthService {
 
     // Generate JWT
     const payload = { sub: user.id, email: user.email };
-    
+
     // Return user without password + token
     const { password, ...result } = user;
     return {

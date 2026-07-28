@@ -3,7 +3,9 @@ import { VenezuelanStatesService } from './venezuelan-states.service';
 
 @Controller('venezuelan_states')
 export class VenezuelanStatesController {
-  constructor(private readonly venezuelanStatesService: VenezuelanStatesService) {}
+  constructor(
+    private readonly venezuelanStatesService: VenezuelanStatesService,
+  ) {}
 
   @Get()
   findAll() {

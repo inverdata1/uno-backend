@@ -6,6 +6,6 @@ import { PrismaModule } from '../prisma/prisma.module';
 @Module({
   imports: [PrismaModule],
   controllers: [AddressTypesController],
-  providers: [AddressTypesService]
+  providers: [AddressTypesService],
 })
 export class AddressTypesModule {}

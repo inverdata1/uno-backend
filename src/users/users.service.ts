@@ -7,6 +7,49 @@ import { PrismaService } from '../prisma/prisma.service';
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async fixBusinessUsers() {
+    const users = await this.prisma.user.findMany({
+      where: { currentUserType: 'business' },
+      include: { ownedBusinesses: true },
+    });
+
+    let fixed = 0;
+    for (const user of users) {
+      if (!user.ownedBusinesses || user.ownedBusinesses.length === 0) {
+        const businessName =
+          user.displayName || user.firstName
+            ? `${user.firstName} Negocio`
+            : 'Mi Negocio';
+        const newBusiness = await this.prisma.business.create({
+          data: {
+            ownerId: user.id,
+            businessName: businessName,
+            status: 'active',
+            branches: {
+              create: {
+                name: 'Sede Principal',
+                isMain: true,
+                status: 'active',
+                phone: user.phone,
+              },
+            },
+          },
+          include: { branches: true },
+        });
+        const mainBranch = newBusiness.branches[0];
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: {
+            currentBusinessId: newBusiness.id,
+            currentBranchId: mainBranch.id,
+          },
+        });
+        fixed++;
+      }
+    }
+    return { success: true, fixed };
+  }
+
   create(createUserDto: CreateUserDto) {
     return 'This action adds a new user';
   }
@@ -23,10 +66,31 @@ export class UsersService {
     return `This action updates a #${id} user`;
   }
 
+  async getProfile(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        displayName: true,
+        phone: true,
+        dateOfBirth: true,
+      }
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    return user;
+  }
+
   async updateProfile(userId: string, data: any) {
     // Check if user exists
     const user = await this.prisma.user.findUnique({
-      where: { id: userId }
+      where: { id: userId },
     });
 
     if (!user) {
@@ -43,7 +107,7 @@ export class UsersService {
   async getUserTypes(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: { ownedBusinesses: true }
+      include: { ownedBusinesses: true },
     });
 
     if (!user) {
@@ -52,43 +116,51 @@ export class UsersService {
 
     let userTypesObj = { client: { status: 'active' } };
     if (user.userTypes) {
-      userTypesObj = typeof user.userTypes === 'string' ? JSON.parse(user.userTypes) : user.userTypes;
+      userTypesObj =
+        typeof user.userTypes === 'string'
+          ? JSON.parse(user.userTypes)
+          : user.userTypes;
     }
 
-    const availableUserTypes = Object.keys(userTypesObj).filter(key => userTypesObj[key].status === 'active');
-    
+    const availableUserTypes = Object.keys(userTypesObj).filter(
+      (key) => userTypesObj[key].status === 'active',
+    );
+
     // Default to client if somehow missing
     if (!availableUserTypes.includes('client')) {
       availableUserTypes.push('client');
       userTypesObj['client'] = { status: 'active' };
     }
 
-    const businessContexts = user.ownedBusinesses.map(b => ({
+    const businessContexts = user.ownedBusinesses.map((b) => ({
       id: b.id,
+      businessId: b.id,
       name: b.businessName,
       status: b.status,
     }));
 
     return {
       currentUserType: user.currentUserType || 'client',
-      currentContext: { 
-        businessId: user.currentBusinessId, 
-        branchId: user.currentBranchId 
+      currentContext: {
+        businessId: user.currentBusinessId,
+        branchId: user.currentBranchId,
       },
       availableUserTypes,
       userTypes: userTypesObj,
-      businessContexts
+      businessContexts,
     };
   }
 
   async remove(id: string) {
     try {
       return await this.prisma.user.delete({
-        where: { id }
+        where: { id },
       });
     } catch (error) {
       console.error('Error deleting user:', error);
-      throw new NotFoundException(`User with ID ${id} not found or could not be deleted`);
+      throw new NotFoundException(
+        `User with ID ${id} not found or could not be deleted`,
+      );
     }
   }
 }

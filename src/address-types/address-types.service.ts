@@ -12,7 +12,7 @@ export class AddressTypesService {
       return [
         { id: '1', name: 'Casa', icon: 'home-outline' },
         { id: '2', name: 'Trabajo', icon: 'briefcase-outline' },
-        { id: '3', name: 'Otro', icon: 'location-outline' }
+        { id: '3', name: 'Otro', icon: 'location-outline' },
       ];
     }
     return types;

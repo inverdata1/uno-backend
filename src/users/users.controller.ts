@@ -1,4 +1,16 @@
-import { Controller, Get, Post, Put, Body, Patch, Param, Delete, Req, Query, BadRequestException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Req,
+  Query,
+  BadRequestException,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -14,14 +26,7 @@ export class UsersController {
 
   @Get('profile')
   getProfile(@Req() req) {
-    // Retornamos los datos del usuario logueado extraídos del token (agregado por JwtAuthGuard)
-    return {
-      id: req.user.sub,
-      email: req.user.email,
-      // Retornar datos extra mockeados hasta que se implemente consulta completa en BD
-      firstName: 'Usuario',
-      lastName: '',
-    };
+    return this.usersService.getProfile(req.user.sub);
   }
 
   @Put('profile')
@@ -35,6 +40,11 @@ export class UsersController {
   @Get('user-types')
   getUserTypes(@Req() req) {
     return this.usersService.getUserTypes(req.user.sub);
+  }
+
+  @Get('fix-business-users')
+  fixBusinessUsers() {
+    return this.usersService.fixBusinessUsers();
   }
 
   @Get()
