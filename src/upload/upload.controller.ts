@@ -19,7 +19,7 @@ export class UploadController {
         destination: './uploads',
         filename: (req, file, cb) => {
           const body = req.body as Record<string, any>;
-          const productName = String(body.productName || 'product').replace(/\s+/g, '_');
+          const productName = String(body.productName || 'media').replace(/\s+/g, '_');
           const businessId = String(body.businessId || 'business').replace(/\s+/g, '_');
           const uniqueSuffix = Date.now();
           const ext = extname(file.originalname);
@@ -41,7 +41,7 @@ export class UploadController {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
-    return { url: `/api/uploads/${file.filename}` };
+    return { url: `/uploads/${file.filename}` };
   }
 
   @Post('video')
@@ -51,7 +51,7 @@ export class UploadController {
         destination: './uploads',
         filename: (req, file, cb) => {
           const body = req.body as Record<string, any>;
-          const productName = String(body.productName || 'product').replace(/\s+/g, '_');
+          const productName = String(body.productName || 'media').replace(/\s+/g, '_');
           const businessId = String(body.businessId || 'business').replace(/\s+/g, '_');
           const uniqueSuffix = Date.now();
           const ext = extname(file.originalname);
@@ -73,6 +73,6 @@ export class UploadController {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
-    return { url: `/api/uploads/${file.filename}` };
+    return { url: `/uploads/${file.filename}` };
   }
 }

@@ -3,7 +3,6 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.setGlobalPrefix('api');
 
   // Habilitar CORS para permitir peticiones desde React Native / Web
   app.enableCors();
