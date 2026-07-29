@@ -18,7 +18,7 @@ export class BusinessesController {
 
   @Post()
   create(@Req() req, @Body() createBusinessDto: any) {
-    const ownerId = req?.user?.sub;
+    const ownerId = req.query.userId as string;
     return this.businessesService.create(ownerId, createBusinessDto);
   }
 
