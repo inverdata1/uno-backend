@@ -43,8 +43,30 @@ export class AuthService {
       if (businessData) {
         const business = await tx.business.create({
           data: {
-            ...businessData,
             ownerId: createdUser.id,
+            businessName: businessData.businessName,
+            description: businessData.description,
+            category: businessData.category,
+            logoUrl: businessData.logoUrl,
+            bannerUrl: businessData.bannerUrl,
+            status: 'active',
+            branches: {
+              create: {
+                name: 'Sede Principal',
+                isMain: true,
+                address: businessData.address
+                  ? { street: businessData.address, coordinates: businessData.coordinates }
+                  : undefined,
+                latitude: businessData.coordinates?.latitude
+                  ? businessData.coordinates.latitude
+                  : undefined,
+                longitude: businessData.coordinates?.longitude
+                  ? businessData.coordinates.longitude
+                  : undefined,
+                phone: businessData.phone,
+                status: 'active',
+              },
+            },
           },
         });
 
