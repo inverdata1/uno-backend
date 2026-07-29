@@ -41,7 +41,7 @@ export class UploadController {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
-    return { url: `/uploads/${file.filename}` };
+    return { url: `/api/uploads/${file.filename}` };
   }
 
   @Post('video')
@@ -73,6 +73,6 @@ export class UploadController {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
-    return { url: `/uploads/${file.filename}` };
+    return { url: `/api/uploads/${file.filename}` };
   }
 }

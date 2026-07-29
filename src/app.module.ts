@@ -42,7 +42,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     DashboardModule,
     ServeStaticModule.forRoot({
       rootPath: join(process.cwd(), 'uploads'),
-      serveRoot: '/uploads',
+      serveRoot: '/api/uploads',
     }),
   ],
   controllers: [AppController],
