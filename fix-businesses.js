@@ -1,5 +1,11 @@
 const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const { Pool } = require('pg');
+const { PrismaPg } = require('@prisma/adapter-pg');
+
+const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:admin1206@localhost:5432/uno_delivery?schema=public';
+const pool = new Pool({ connectionString });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log('Buscando usuarios con negocios pero sin contexto asignado...');
