@@ -20,6 +20,7 @@ export class BusinessesService {
         businessName: data.businessName,
         description: data.description,
         businessHours: data.businessHours,
+        businessType: data.businessType,
         category: data.category,
         logoUrl: data.logoUrl,
         bannerUrl: data.bannerUrl,
