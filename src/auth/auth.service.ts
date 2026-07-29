@@ -28,15 +28,34 @@ export class AuthService {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(data.password, salt);
 
-    // Filter out password from the original payload and include the hashed one
-    const { password, ...rest } = data;
+    // Filter out password and businessData from the original payload
+    const { password, businessData, ...rest } = data;
 
-    // Create user in DB
-    const user = await this.prisma.user.create({
-      data: {
-        ...rest,
-        password: hashedPassword,
-      },
+    // Create user (and optionally business) atomically using a transaction
+    const user = await this.prisma.$transaction(async (tx) => {
+      let createdUser = await tx.user.create({
+        data: {
+          ...rest,
+          password: hashedPassword,
+        },
+      });
+
+      if (businessData) {
+        const business = await tx.business.create({
+          data: {
+            ...businessData,
+            ownerId: createdUser.id,
+          },
+        });
+
+        // Update the user's current business context
+        createdUser = await tx.user.update({
+          where: { id: createdUser.id },
+          data: { currentBusinessId: business.id },
+        });
+      }
+
+      return createdUser;
     });
 
     // Remove password from response
