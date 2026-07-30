@@ -45,6 +45,8 @@ export class AuthService {
           data: {
             ownerId: createdUser.id,
             businessName: businessData.businessName,
+            businessType: businessData.businessType,
+            businessHours: businessData.businessHours,
             description: businessData.description,
             category: businessData.category,
             logoUrl: businessData.logoUrl,
