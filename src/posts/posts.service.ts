@@ -36,6 +36,35 @@ export class PostsService {
     });
   }
 
+  async findByProduct(productId: string) {
+    if (!productId) return [];
+    
+    // Fetch all active posts and filter in memory since taggedProducts is a JSON array
+    // This is safer for cross-database compatibility (Postgres/SQLite)
+    const posts = await this.prisma.post.findMany({
+      where: {
+        isActive: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: {
+        business: {
+          select: {
+            id: true,
+            businessName: true,
+            logoUrl: true,
+          }
+        }
+      }
+    });
+
+    return posts.filter(post => {
+      if (!post.taggedProducts || !Array.isArray(post.taggedProducts)) return false;
+      return post.taggedProducts.some((tag: any) => tag.productId === productId);
+    });
+  }
+
   async findAll() {
     return this.prisma.post.findMany({
       where: {

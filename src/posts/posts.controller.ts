@@ -23,6 +23,11 @@ export class PostsController {
     return this.postsService.findByBusiness(businessId);
   }
 
+  @Get('product')
+  findByProduct(@Query('productId') productId: string) {
+    return this.postsService.findByProduct(productId);
+  }
+
   @Patch(':id/like')
   like(@Param('id') id: string) {
     return this.postsService.like(id);
