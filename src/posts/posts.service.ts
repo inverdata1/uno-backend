@@ -60,8 +60,15 @@ export class PostsService {
     });
 
     return posts.filter(post => {
-      if (!post.taggedProducts || !Array.isArray(post.taggedProducts)) return false;
-      return post.taggedProducts.some((tag: any) => tag.productId === productId);
+      if (!post.taggedProducts) return false;
+      let tags: any = post.taggedProducts;
+      if (typeof tags === 'string') {
+        try {
+          tags = JSON.parse(tags);
+        } catch (e) {}
+      }
+      if (!Array.isArray(tags)) return false;
+      return tags.some((tag: any) => tag.productId === productId);
     });
   }
 
