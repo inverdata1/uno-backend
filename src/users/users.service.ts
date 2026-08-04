@@ -77,6 +77,7 @@ export class UsersService {
         displayName: true,
         phone: true,
         dateOfBirth: true,
+        preferences: true,
       }
     });
 
@@ -85,6 +86,44 @@ export class UsersService {
     }
 
     return user;
+  }
+
+  async getPreferences(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { preferences: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    return user.preferences || {};
+  }
+
+  async updatePreferences(userId: string, newPreferences: any) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { preferences: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    const currentPreferences = (user.preferences as object) || {};
+    const mergedPreferences = {
+      ...currentPreferences,
+      ...newPreferences,
+    };
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: { preferences: mergedPreferences },
+      select: { id: true, preferences: true },
+    });
+
+    return updatedUser.preferences;
   }
 
   async updateProfile(userId: string, data: any) {
