@@ -127,10 +127,102 @@ export class PostsService {
     });
   }
 
-  async like(id: string) {
+  async like(id: string, userId?: string) {
+    if (userId) {
+      await this.recordInteraction({ userId, action: 'LIKE_POST', postId: id });
+    }
     return this.prisma.post.update({
       where: { id },
       data: { likeCount: { increment: 1 } },
     });
+  }
+
+  async recordInteraction(data: {
+    userId?: string;
+    action: string;
+    postId?: string;
+    productId?: string;
+    businessId?: string;
+    metadata?: any;
+  }) {
+    // 1. Create interaction record for algorithm analytics
+    const interaction = await this.prisma.userInteraction.create({
+      data: {
+        userId: data.userId || null,
+        action: data.action,
+        postId: data.postId || null,
+        productId: data.productId || null,
+        businessId: data.businessId || null,
+        metadata: data.metadata || null,
+      },
+    });
+
+    // 2. Increment counters on corresponding models
+    if (data.postId && (data.action === 'VIEW_POST' || data.action === 'FULLSCREEN_VIEW')) {
+      await this.prisma.post.update({
+        where: { id: data.postId },
+        data: { viewCount: { increment: 1 } },
+      }).catch(() => null);
+    }
+
+    if (data.businessId && data.action === 'VIEW_BUSINESS') {
+      await this.prisma.business.update({
+        where: { id: data.businessId },
+        data: { viewCount: { increment: 1 } },
+      }).catch(() => null);
+    }
+
+    return interaction;
+  }
+
+  async toggleFavoritePost(userId: string, postId: string) {
+    const existing = await this.prisma.favorite.findFirst({
+      where: { userId, entityId: postId, entityType: 'post' },
+    });
+
+    if (existing) {
+      await this.prisma.favorite.delete({ where: { id: existing.id } });
+      return { isFavorite: false, message: 'Publicación eliminada de favoritos' };
+    } else {
+      await this.prisma.favorite.create({
+        data: { userId, entityId: postId, entityType: 'post' },
+      });
+      await this.recordInteraction({ userId, action: 'FAVORITE_POST', postId });
+      return { isFavorite: true, message: 'Publicación guardada en favoritos' };
+    }
+  }
+
+  async favoritePostProducts(userId: string, postId: string) {
+    const post = await this.prisma.post.findUnique({ where: { id: postId } });
+    if (!post || !post.taggedProducts) {
+      return { count: 0, message: 'No hay productos etiquetados en este post' };
+    }
+
+    let tags: any = post.taggedProducts;
+    if (typeof tags === 'string') {
+      try { tags = JSON.parse(tags); } catch (e) {}
+    }
+
+    if (!Array.isArray(tags)) return { count: 0, message: 'Sin productos etiquetados' };
+
+    let addedCount = 0;
+    for (const tag of tags) {
+      const productId = typeof tag === 'object' ? (tag.productId || tag.id) : tag;
+      if (!productId) continue;
+
+      const existing = await this.prisma.favorite.findFirst({
+        where: { userId, entityId: productId, entityType: 'product' },
+      });
+
+      if (!existing) {
+        await this.prisma.favorite.create({
+          data: { userId, entityId: productId, entityType: 'product' },
+        });
+        await this.recordInteraction({ userId, action: 'FAVORITE_PRODUCT', productId, postId });
+        addedCount++;
+      }
+    }
+
+    return { count: addedCount, message: `Se añadieron ${addedCount} productos a tus favoritos` };
   }
 }

@@ -29,8 +29,23 @@ export class PostsController {
   }
 
   @Patch(':id/like')
-  like(@Param('id') id: string) {
-    return this.postsService.like(id);
+  like(@Param('id') id: string, @Body('userId') userId?: string) {
+    return this.postsService.like(id, userId);
+  }
+
+  @Post('track-interaction')
+  trackInteraction(@Body() body: any) {
+    return this.postsService.recordInteraction(body);
+  }
+
+  @Post(':id/favorite')
+  toggleFavoritePost(@Param('id') id: string, @Body('userId') userId: string) {
+    return this.postsService.toggleFavoritePost(userId, id);
+  }
+
+  @Post(':id/favorite-products')
+  favoritePostProducts(@Param('id') id: string, @Body('userId') userId: string) {
+    return this.postsService.favoritePostProducts(userId, id);
   }
 
   @Delete(':id')
