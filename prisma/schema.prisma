@@ -19,6 +19,8 @@ model User {
   lastName            String?
   phone               String?
   dateOfBirth         String?
+  avatarUrl           String?
+  bannerUrl           String?
   preferences         Json?
   userTypes           Json?      // Guarda los estados de cada rol (client, business, delivery)
   currentUserType     String?

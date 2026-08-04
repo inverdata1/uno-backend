@@ -77,6 +77,8 @@ export class UsersService {
         displayName: true,
         phone: true,
         dateOfBirth: true,
+        avatarUrl: true,
+        bannerUrl: true,
         preferences: true,
       }
     });
