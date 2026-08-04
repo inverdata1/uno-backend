@@ -69,25 +69,14 @@ export class UsersService {
   async getProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        displayName: true,
-        phone: true,
-        dateOfBirth: true,
-        avatarUrl: true,
-        bannerUrl: true,
-        preferences: true,
-      }
     });
 
     if (!user) {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
-    return user;
+    const { password, ...result } = user;
+    return result;
   }
 
   async getPreferences(userId: string) {

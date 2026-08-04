@@ -25,8 +25,12 @@ export class UsersController {
   }
 
   @Get('profile')
-  getProfile(@Req() req) {
-    return this.usersService.getProfile(req.user.sub);
+  async getProfile(@Query('userId') userIdQuery: string, @Req() req: any) {
+    const userId = userIdQuery || req?.user?.sub || req?.user?.id;
+    if (!userId) {
+      throw new BadRequestException('userId is required');
+    }
+    return this.usersService.getProfile(userId);
   }
 
   @Put('profile')
