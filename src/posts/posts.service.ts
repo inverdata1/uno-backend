@@ -72,8 +72,8 @@ export class PostsService {
     });
   }
 
-  async findAll() {
-    return this.prisma.post.findMany({
+  async findAll(userId?: string) {
+    const posts = await this.prisma.post.findMany({
       where: {
         isActive: true,
       },
@@ -90,23 +90,32 @@ export class PostsService {
         }
       }
     });
+
+    if (!userId) {
+      return posts.map(post => ({ ...post, isLiked: false }));
+    }
+
+    const userLikes = await this.prisma.userInteraction.findMany({
+      where: { userId, action: 'LIKE_POST' },
+      select: { postId: true },
+    });
+    const likedPostIds = new Set(userLikes.map(l => l.postId));
+
+    return posts.map(post => ({
+      ...post,
+      isLiked: likedPostIds.has(post.id),
+    }));
   }
 
   async delete(id: string) {
-    console.log(`[PostsService] Attempting to delete post with ID: "${id}"`);
     try {
       const result = await this.prisma.post.update({
         where: { id },
         data: { isActive: false },
       });
-      console.log(`[PostsService] Successfully deleted post ID: "${id}"`);
       return result;
     } catch (error) {
-      console.error(`[PostsService] Error deleting post ID: "${id}"`, error.code, error.message);
       if (error.code === 'P2025') {
-        console.log(`[PostsService] Post not found (P2025), returning success anyway.`);
-        // Record not found, might have been deleted already.
-        // We can just return success or throw a 404. Let's return true.
         return { success: true, message: 'Post was already deleted or not found' };
       }
       throw error;
@@ -128,13 +137,37 @@ export class PostsService {
   }
 
   async like(id: string, userId?: string) {
-    if (userId) {
-      await this.recordInteraction({ userId, action: 'LIKE_POST', postId: id });
+    if (!userId) {
+      const updated = await this.prisma.post.update({
+        where: { id },
+        data: { likeCount: { increment: 1 } },
+      });
+      return { isLiked: true, likeCount: updated.likeCount };
     }
-    return this.prisma.post.update({
-      where: { id },
-      data: { likeCount: { increment: 1 } },
+
+    const existing = await this.prisma.userInteraction.findFirst({
+      where: { userId, postId: id, action: 'LIKE_POST' },
     });
+
+    if (existing) {
+      await this.prisma.userInteraction.delete({ where: { id: existing.id } });
+      const current = await this.prisma.post.findUnique({ where: { id } });
+      const newCount = Math.max(0, (current?.likeCount || 1) - 1);
+      const updated = await this.prisma.post.update({
+        where: { id },
+        data: { likeCount: newCount },
+      });
+      return { isLiked: false, likeCount: updated.likeCount };
+    } else {
+      await this.prisma.userInteraction.create({
+        data: { userId, action: 'LIKE_POST', postId: id },
+      });
+      const updated = await this.prisma.post.update({
+        where: { id },
+        data: { likeCount: { increment: 1 } },
+      });
+      return { isLiked: true, likeCount: updated.likeCount };
+    }
   }
 
   async recordInteraction(data: {

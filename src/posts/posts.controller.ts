@@ -11,11 +11,11 @@ export class PostsController {
   }
 
   @Get()
-  findAll(@Query('businessId') businessId?: string) {
+  findAll(@Query('businessId') businessId?: string, @Query('userId') userId?: string) {
     if (businessId) {
       return this.postsService.findByBusiness(businessId);
     }
-    return this.postsService.findAll();
+    return this.postsService.findAll(userId);
   }
 
   @Get('business/:businessId')

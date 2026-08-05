@@ -126,8 +126,15 @@ export class BusinessesService {
     return this.getProfile(businessId);
   }
 
-  findAll() {
-    return [];
+  async findAll() {
+    return this.prisma.business.findMany({
+      where: {
+        isActive: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
   }
 
   findOne(id: number) {
