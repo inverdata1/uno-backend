@@ -20,6 +20,7 @@ import { UploadModule } from './upload/upload.module';
 import { StoriesModule } from './stories/stories.module';
 import { PostsModule } from './posts/posts.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { CommentsModule } from './comments/comments.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     StoriesModule,
     PostsModule,
     DashboardModule,
+    CommentsModule,
     ServeStaticModule.forRoot({
       rootPath: join(process.cwd(), 'uploads'),
       serveRoot: '/uploads',

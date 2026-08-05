@@ -33,4 +33,20 @@ export class ProductsService {
   remove(id: string) {
     return this.prisma.product.delete({ where: { id } });
   }
+
+  async toggleFavorite(userId: string, productId: string) {
+    const existing = await this.prisma.favorite.findFirst({
+      where: { userId, entityId: productId, entityType: 'product' },
+    });
+
+    if (existing) {
+      await this.prisma.favorite.delete({ where: { id: existing.id } });
+      return { isFavorite: false, message: 'Producto eliminado de favoritos' };
+    } else {
+      await this.prisma.favorite.create({
+        data: { userId, entityId: productId, entityType: 'product' },
+      });
+      return { isFavorite: true, message: 'Producto guardado en favoritos' };
+    }
+  }
 }

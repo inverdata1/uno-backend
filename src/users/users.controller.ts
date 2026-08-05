@@ -53,6 +53,12 @@ export class UsersController {
     return this.usersService.updatePreferences(userId, body);
   }
 
+  @Get('favorites')
+  async getFavorites(@Query('userId') userId: string) {
+    if (!userId) throw new BadRequestException('userId is required');
+    return this.usersService.getFavorites(userId);
+  }
+
   @Get('user-types')
   getUserTypes(@Query('userId') userId: string) {
     if (!userId) throw new BadRequestException('userId is required');

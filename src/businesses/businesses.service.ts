@@ -137,6 +137,58 @@ export class BusinessesService {
     });
   }
 
+  async search(query: string) {
+    if (!query || !query.trim()) return [];
+
+    return this.prisma.business.findMany({
+      where: {
+        isActive: true,
+        OR: [
+          { businessName: { contains: query, mode: 'insensitive' } },
+          { category: { contains: query, mode: 'insensitive' } },
+          { businessType: { contains: query, mode: 'insensitive' } },
+        ],
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async discover() {
+    const [featured, businesses, trendingPosts] = await Promise.all([
+      this.prisma.business.findMany({
+        where: { isActive: true, isFeatured: true },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      }),
+      this.prisma.business.findMany({
+        where: { isActive: true, category: { not: null } },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.post.findMany({
+        where: { isActive: true, isPublished: true },
+        orderBy: [{ likeCount: 'desc' }, { viewCount: 'desc' }],
+        take: 15,
+        include: {
+          business: { select: { id: true, businessName: true, logoUrl: true } },
+        },
+      }),
+    ]);
+
+    const byCategory = new Map<string, any[]>();
+    for (const business of businesses) {
+      const category = business.category as string;
+      if (!byCategory.has(category)) byCategory.set(category, []);
+      byCategory.get(category)!.push(business);
+    }
+
+    const categories = Array.from(byCategory.entries()).map(([category, items]) => ({
+      category,
+      businesses: items.slice(0, 10),
+    }));
+
+    return { featured, categories, trendingPosts };
+  }
+
   findOne(id: number) {
     return `This action returns a #${id} business`;
   }

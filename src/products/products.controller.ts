@@ -46,4 +46,9 @@ export class ProductsController {
   remove(@Param('id') id: string) {
     return this.productsService.remove(id);
   }
+
+  @Post(':id/favorite')
+  toggleFavorite(@Param('id') id: string, @Body('userId') userId: string) {
+    return this.productsService.toggleFavorite(userId, id);
+  }
 }

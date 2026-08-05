@@ -181,6 +181,47 @@ export class UsersService {
     };
   }
 
+  async getFavorites(userId: string) {
+    const favorites = await this.prisma.favorite.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const postFavorites = favorites.filter((f) => f.entityType === 'post');
+    const productFavorites = favorites.filter((f) => f.entityType === 'product');
+
+    const [posts, products] = await Promise.all([
+      postFavorites.length
+        ? this.prisma.post.findMany({
+            where: { id: { in: postFavorites.map((f) => f.entityId) }, isActive: true },
+            include: {
+              business: { select: { id: true, businessName: true, logoUrl: true } },
+            },
+          })
+        : Promise.resolve([]),
+      productFavorites.length
+        ? this.prisma.product.findMany({
+            where: { id: { in: productFavorites.map((f) => f.entityId) }, isActive: true },
+            include: {
+              business: { select: { id: true, businessName: true, logoUrl: true } },
+            },
+          })
+        : Promise.resolve([]),
+    ]);
+
+    const postFavoritedAt = new Map(postFavorites.map((f) => [f.entityId, f.createdAt]));
+    const productFavoritedAt = new Map(productFavorites.map((f) => [f.entityId, f.createdAt]));
+
+    return {
+      posts: posts
+        .map((p) => ({ ...p, favoritedAt: postFavoritedAt.get(p.id) }))
+        .sort((a, b) => (b.favoritedAt as Date).getTime() - (a.favoritedAt as Date).getTime()),
+      products: products
+        .map((p) => ({ ...p, favoritedAt: productFavoritedAt.get(p.id) }))
+        .sort((a, b) => (b.favoritedAt as Date).getTime() - (a.favoritedAt as Date).getTime()),
+    };
+  }
+
   async remove(id: string) {
     try {
       return await this.prisma.user.delete({

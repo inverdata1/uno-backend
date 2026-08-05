@@ -39,6 +39,16 @@ export class BusinessesController {
     return this.businessesService.findAll();
   }
 
+  @Get('discover')
+  discover() {
+    return this.businessesService.discover();
+  }
+
+  @Get('search')
+  search(@Req() req) {
+    return this.businessesService.search(req.query.q as string);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.businessesService.findOne(+id);
