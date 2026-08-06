@@ -6,15 +6,9 @@ export class AddressTypesService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll() {
-    const types = await this.prisma.addressType.findMany();
-    // Temporary fallback if empty since we are not seeding
-    if (types.length === 0) {
-      return [
-        { id: '1', name: 'Casa', icon: 'home-outline' },
-        { id: '2', name: 'Trabajo', icon: 'briefcase-outline' },
-        { id: '3', name: 'Otro', icon: 'location-outline' },
-      ];
-    }
-    return types;
+    // No fallback list here on purpose: it used to return ids that did not exist
+    // in the table, so saving an address with one failed a foreign key check.
+    // The rows are seeded by migration 20260806130000_seed_address_reference_data.
+    return this.prisma.addressType.findMany();
   }
 }
