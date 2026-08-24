@@ -5,6 +5,10 @@ import { PrismaService } from '../prisma/prisma.service';
 export class ChatService {
   constructor(private prisma: PrismaService) {}
 
+  private get db(): any {
+    return this.prisma;
+  }
+
   /**
    * Find existing conversation between 2 participants or create a new one
    */
@@ -18,7 +22,7 @@ export class ChatService {
       throw new BadRequestException('Ambos IDs de participantes son requeridos');
     }
 
-    let conversation = await this.prisma.conversation.findFirst({
+    let conversation = await this.db.conversation.findFirst({
       where: {
         OR: [
           {
@@ -44,7 +48,7 @@ export class ChatService {
     });
 
     if (!conversation) {
-      conversation = await this.prisma.conversation.create({
+      conversation = await this.db.conversation.create({
         data: {
           participant1Id: p1Id,
           participant1Type: p1Type,
@@ -76,7 +80,7 @@ export class ChatService {
   async getConversationsForParticipant(participantId: string, participantType: string) {
     if (!participantId) return [];
 
-    const conversations = await this.prisma.conversation.findMany({
+    const conversations = await this.db.conversation.findMany({
       where: {
         OR: [
           { participant1Id: participantId, participant1Type: participantType },
@@ -94,14 +98,14 @@ export class ChatService {
 
     // Populate participant profiles & unread count
     const enriched = await Promise.all(
-      conversations.map(async (conv) => {
+      conversations.map(async (conv: any) => {
         const isP1 = conv.participant1Id === participantId && conv.participant1Type === participantType;
         const otherId = isP1 ? conv.participant2Id : conv.participant1Id;
         const otherType = isP1 ? conv.participant2Type : conv.participant1Type;
 
         const otherParticipant = await this.getParticipantInfo(otherId, otherType);
 
-        const unreadCount = await this.prisma.message.count({
+        const unreadCount = await this.db.message.count({
           where: {
             conversationId: conv.id,
             receiverId: participantId,
@@ -128,7 +132,7 @@ export class ChatService {
 
     if (currentParticipantId) {
       // Mark as read
-      await this.prisma.message.updateMany({
+      await this.db.message.updateMany({
         where: {
           conversationId,
           receiverId: currentParticipantId,
@@ -138,7 +142,7 @@ export class ChatService {
       });
     }
 
-    const messages = await this.prisma.message.findMany({
+    const messages = await this.db.message.findMany({
       where: { conversationId },
       orderBy: { createdAt: 'asc' },
     });
@@ -162,7 +166,7 @@ export class ChatService {
       throw new BadRequestException('Campos requeridos faltantes para enviar el mensaje');
     }
 
-    const message = await this.prisma.message.create({
+    const message = await this.db.message.create({
       data: {
         conversationId: dto.conversationId,
         senderId: dto.senderId,
@@ -176,7 +180,7 @@ export class ChatService {
     });
 
     // Update conversation lastMessage & timestamp
-    await this.prisma.conversation.update({
+    await this.db.conversation.update({
       where: { id: dto.conversationId },
       data: {
         lastMessage: dto.content,
@@ -193,7 +197,7 @@ export class ChatService {
    */
   async getUnreadCount(participantId: string) {
     if (!participantId) return { unreadCount: 0 };
-    const unreadCount = await this.prisma.message.count({
+    const unreadCount = await this.db.message.count({
       where: {
         receiverId: participantId,
         isRead: false,
@@ -212,7 +216,7 @@ export class ChatService {
     }
 
     if (type === 'business') {
-      const biz = await this.prisma.business.findUnique({
+      const biz = await this.db.business.findUnique({
         where: { id },
         select: { id: true, businessName: true, logoUrl: true },
       });
@@ -228,7 +232,7 @@ export class ChatService {
     }
 
     // Fallback or User lookup
-    const usr = await this.prisma.user.findUnique({
+    const usr = await this.db.user.findUnique({
       where: { id },
       select: { id: true, displayName: true, firstName: true, lastName: true, avatarUrl: true },
     });
@@ -244,7 +248,7 @@ export class ChatService {
     }
 
     // Secondary fallback to Business if user was not found
-    const bizFallback = await this.prisma.business.findUnique({
+    const bizFallback = await this.db.business.findUnique({
       where: { id },
       select: { id: true, businessName: true, logoUrl: true },
     });
