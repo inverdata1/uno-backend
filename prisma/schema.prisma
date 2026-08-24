@@ -295,3 +295,37 @@ model UserInteraction {
   metadata        Json?
   createdAt       DateTime    @default(now())
 }
+
+model Conversation {
+  id                String      @id @default(uuid())
+  participant1Id    String
+  participant1Type  String      // 'user' | 'business'
+  participant2Id    String
+  participant2Type  String      // 'user' | 'business'
+  lastMessage       String?
+  lastMessageAt     DateTime?   @default(now())
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  messages          Message[]
+
+  @@index([participant1Id])
+  @@index([participant2Id])
+}
+
+model Message {
+  id              String        @id @default(uuid())
+  conversationId  String
+  conversation    Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId        String
+  senderType      String        // 'user' | 'business'
+  receiverId      String
+  receiverType    String        // 'user' | 'business'
+  content         String
+  mediaUrl        String?
+  isRead          Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+
+  @@index([conversationId])
+  @@index([receiverId])
+}
+
