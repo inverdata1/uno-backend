@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -14,6 +14,10 @@ export class ChatService {
     p2Id: string,
     p2Type: string,
   ) {
+    if (!p1Id || !p2Id) {
+      throw new BadRequestException('Ambos IDs de participantes son requeridos');
+    }
+
     let conversation = await this.prisma.conversation.findFirst({
       where: {
         OR: [
@@ -54,14 +58,11 @@ export class ChatService {
     }
 
     // Enrich target participant profile (name, avatar/logo)
-    const otherParticipant = await this.getParticipantInfo(
-      conversation.participant1Id === p1Id && conversation.participant1Type === p1Type
-        ? conversation.participant2Id
-        : conversation.participant1Id,
-      conversation.participant1Id === p1Id && conversation.participant1Type === p1Type
-        ? conversation.participant2Type
-        : conversation.participant1Type,
-    );
+    const isP1 = conversation.participant1Id === p1Id && conversation.participant1Type === p1Type;
+    const otherId = isP1 ? conversation.participant2Id : conversation.participant1Id;
+    const otherType = isP1 ? conversation.participant2Type : conversation.participant1Type;
+
+    const otherParticipant = await this.getParticipantInfo(otherId, otherType);
 
     return {
       ...conversation,
@@ -123,6 +124,8 @@ export class ChatService {
    * Get messages in a conversation & mark incoming messages as read
    */
   async getMessages(conversationId: string, currentParticipantId: string) {
+    if (!conversationId) return [];
+
     if (currentParticipantId) {
       // Mark as read
       await this.prisma.message.updateMany({
@@ -155,6 +158,10 @@ export class ChatService {
     content: string;
     mediaUrl?: string;
   }) {
+    if (!dto.conversationId || !dto.senderId || !dto.receiverId || !dto.content) {
+      throw new BadRequestException('Campos requeridos faltantes para enviar el mensaje');
+    }
+
     const message = await this.prisma.message.create({
       data: {
         conversationId: dto.conversationId,
@@ -200,29 +207,62 @@ export class ChatService {
    * Helper to fetch name and image for a participant (User or Business)
    */
   private async getParticipantInfo(id: string, type: string) {
+    if (!id) {
+      return { id: '', type: type || 'user', name: 'Usuario', avatar: null };
+    }
+
     if (type === 'business') {
       const biz = await this.prisma.business.findUnique({
         where: { id },
         select: { id: true, businessName: true, logoUrl: true },
       });
+
+      if (biz) {
+        return {
+          id: biz.id,
+          type: 'business',
+          name: biz.businessName || 'Negocio',
+          avatar: biz.logoUrl || null,
+        };
+      }
+    }
+
+    // Fallback or User lookup
+    const usr = await this.prisma.user.findUnique({
+      where: { id },
+      select: { id: true, displayName: true, firstName: true, lastName: true, avatarUrl: true },
+    });
+
+    if (usr) {
+      const name = usr.displayName || (usr.firstName ? `${usr.firstName} ${usr.lastName || ''}`.trim() : 'Usuario');
       return {
-        id,
-        type: 'business',
-        name: biz?.businessName || 'Negocio',
-        avatar: biz?.logoUrl || null,
-      };
-    } else {
-      const usr = await this.prisma.user.findUnique({
-        where: { id },
-        select: { id: true, displayName: true, firstName: true, lastName: true, avatarUrl: true },
-      });
-      const name = usr?.displayName || (usr?.firstName ? `${usr.firstName} ${usr.lastName || ''}`.trim() : 'Usuario');
-      return {
-        id,
+        id: usr.id,
         type: 'user',
         name,
-        avatar: usr?.avatarUrl || null,
+        avatar: usr.avatarUrl || null,
       };
     }
+
+    // Secondary fallback to Business if user was not found
+    const bizFallback = await this.prisma.business.findUnique({
+      where: { id },
+      select: { id: true, businessName: true, logoUrl: true },
+    });
+
+    if (bizFallback) {
+      return {
+        id: bizFallback.id,
+        type: 'business',
+        name: bizFallback.businessName || 'Negocio',
+        avatar: bizFallback.logoUrl || null,
+      };
+    }
+
+    return {
+      id,
+      type: type || 'user',
+      name: 'Usuario',
+      avatar: null,
+    };
   }
 }
