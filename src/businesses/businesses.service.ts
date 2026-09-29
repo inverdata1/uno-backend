@@ -189,6 +189,51 @@ export class BusinessesService {
     return { featured, categories, trendingPosts };
   }
 
+  async getFollowing(userId: string) {
+    if (!userId) return [];
+    const follows = await (this.prisma as any).follow.findMany({
+      where: { followerId: userId },
+      select: { followingId: true },
+    });
+    return follows.map((f: any) => f.followingId);
+  }
+
+  async toggleFollow(userId: string, businessId: string) {
+    if (!userId || !businessId) return { isFollowing: false };
+
+    const existing = await (this.prisma as any).follow.findUnique({
+      where: {
+        followerId_followingId: {
+          followerId: userId,
+          followingId: businessId,
+        },
+      },
+    });
+
+    if (existing) {
+      await (this.prisma as any).follow.delete({
+        where: { id: existing.id },
+      });
+      await (this.prisma as any).business.update({
+        where: { id: businessId },
+        data: { followersCount: { decrement: 1 } },
+      });
+      return { isFollowing: false };
+    } else {
+      await (this.prisma as any).follow.create({
+        data: {
+          followerId: userId,
+          followingId: businessId,
+        },
+      });
+      await (this.prisma as any).business.update({
+        where: { id: businessId },
+        data: { followersCount: { increment: 1 } },
+      });
+      return { isFollowing: true };
+    }
+  }
+
   findOne(id: number) {
     return `This action returns a #${id} business`;
   }

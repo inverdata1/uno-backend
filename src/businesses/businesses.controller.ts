@@ -39,6 +39,17 @@ export class BusinessesController {
     return this.businessesService.findAll();
   }
 
+  @Get('following')
+  getFollowing(@Req() req) {
+    const userId = req.query.userId as string;
+    return this.businessesService.getFollowing(userId);
+  }
+
+  @Post(':id/follow')
+  toggleFollow(@Param('id') businessId: string, @Body() body: { userId: string }) {
+    return this.businessesService.toggleFollow(body.userId, businessId);
+  }
+
   @Get('discover')
   discover() {
     return this.businessesService.discover();
