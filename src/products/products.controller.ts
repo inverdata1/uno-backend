@@ -51,4 +51,22 @@ export class ProductsController {
   toggleFavorite(@Param('id') id: string, @Body('userId') userId: string) {
     return this.productsService.toggleFavorite(userId, id);
   }
+
+  @Get(':id/rating-eligibility')
+  getRatingEligibility(
+    @Param('id') id: string,
+    @Query('userId') userId: string,
+  ) {
+    return this.productsService.getRatingEligibility(id, userId);
+  }
+
+  @Post(':id/rate')
+  rateProduct(
+    @Param('id') id: string,
+    @Body('userId') userId: string,
+    @Body('rating') rating: number,
+    @Body('comment') comment?: string,
+  ) {
+    return this.productsService.rateProduct(id, userId, Number(rating), comment);
+  }
 }
