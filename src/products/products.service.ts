@@ -13,13 +13,13 @@ export class ProductsService {
 
   findAll(businessId?: string) {
     const where = businessId ? { businessId } : {};
-    return this.prisma.product.findMany({ where, include: { category: true } });
+    return this.prisma.product.findMany({ where, include: { category: true, business: true } });
   }
 
   findOne(id: string) {
     return this.prisma.product.findUnique({
       where: { id },
-      include: { category: true },
+      include: { category: true, business: true },
     });
   }
 
