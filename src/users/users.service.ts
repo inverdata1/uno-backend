@@ -74,7 +74,7 @@ export class UsersService {
           select: {
             follows: true,
             favorites: true,
-            orders: true,
+            clientOrders: true,
           }
         }
       }
@@ -85,11 +85,12 @@ export class UsersService {
     }
 
     const { password, ...result } = user;
+    const userCount = (user as any)._count;
     return {
       ...result,
-      followingCount: user._count?.follows || 0,
-      favoritesCount: user._count?.favorites || 0,
-      ordersCount: user._count?.orders || 0,
+      followingCount: userCount?.follows || 0,
+      favoritesCount: userCount?.favorites || 0,
+      ordersCount: userCount?.clientOrders || 0,
     };
   }
 
