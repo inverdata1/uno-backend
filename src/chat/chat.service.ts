@@ -166,6 +166,15 @@ export class ChatService {
       throw new BadRequestException('Campos requeridos faltantes para enviar el mensaje');
     }
 
+    let mediaUrlStr: string | null = null;
+    if (dto.mediaUrl) {
+      if (typeof dto.mediaUrl === 'object') {
+        mediaUrlStr = JSON.stringify(dto.mediaUrl);
+      } else {
+        mediaUrlStr = String(dto.mediaUrl);
+      }
+    }
+
     const message = await this.db.message.create({
       data: {
         conversationId: dto.conversationId,
@@ -174,7 +183,7 @@ export class ChatService {
         receiverId: dto.receiverId,
         receiverType: dto.receiverType,
         content: dto.content,
-        mediaUrl: dto.mediaUrl || null,
+        mediaUrl: mediaUrlStr,
         isRead: false,
       },
     });
