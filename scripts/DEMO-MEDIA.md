@@ -1,7 +1,33 @@
 # Manifiesto de media para los datos demo
 
-Checklist para armar la carpeta `demo-media/`. Cada negocio es una subcarpeta
+Checklist para armar la carpeta de fotos. Cada negocio es una subcarpeta
 con el nombre de su *slug* (el mismo que va antes de la @ en su correo).
+
+## Cómo se cargan
+
+Hay dos formas, ambas válidas:
+
+**A. Directa (recomendada de aquí en adelante).** Coloca los archivos en
+`uploads/demo/<slug>/` con los nombres exactos de este documento y corre el
+seeder. Toma lo que exista y deja la imagen genérica en lo que falte.
+
+```bash
+node scripts/seed-demo-data.js
+```
+
+**B. Desde una carpeta suelta.** Si tienes las fotos con nombres cualquiera,
+declara en `scripts/demo-media-map.js` qué archivo es de qué negocio y corre el
+organizador, que las copia a la estructura de arriba. Con `--dry` solo muestra
+el plan sin tocar nada.
+
+```bash
+node scripts/organize-demo-media.js "C:/ruta/a/las/fotos"
+```
+
+Cuando un negocio tiene menos fotos que slots, el organizador las cicla y
+desfasa las de producto respecto a las de post para que no se repita la misma
+imagen en el mismo índice.
+
 
 ## Totales
 

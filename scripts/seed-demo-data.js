@@ -18,6 +18,8 @@ require('dotenv').config();
 const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 
 const DEMO_EMAIL_DOMAIN = 'demo.unodelivery.com';
 const DEMO_PASSWORD = 'demo1234';
@@ -331,8 +333,24 @@ const POST_CAPTIONS = [
 
 const POST_TITLES = ['Lo de hoy', 'Recomendado', 'Favorito de la casa', 'Nuevo en carta', 'Así lo hacemos'];
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const uuid = () => crypto.randomUUID();
+
+/**
+ * Real photos live in uploads/demo/<slug>/ and are preferred when present;
+ * anything missing falls back to the generic CDN image, so the folder can be
+ * filled in gradually without touching this file.
+ */
+const UPLOADS_DEMO_DIR = path.join(process.cwd(), 'uploads', 'demo');
+
+function localMedia(slug, basename) {
+  for (const ext of ['jpg', 'jpeg', 'png', 'webp']) {
+    const file = `${basename}.${ext}`;
+    if (fs.existsSync(path.join(UPLOADS_DEMO_DIR, slug, file))) {
+      return `/uploads/demo/${slug}/${file}`;
+    }
+  }
+  return null;
+}
 
 async function cleanDemoData(client) {
   const { rows: users } = await client.query(
@@ -384,6 +402,13 @@ async function cleanDemoData(client) {
 
 async function seedBusiness(client, spec, index, passwordHash) {
   const now = new Date();
+  const slug = spec.slug;
+
+  const logoUrl = localMedia(slug, 'logo') || photo(`${slug}-logo`, 400);
+  const bannerUrl = localMedia(slug, 'banner') || wide(`${slug}-banner`);
+  const postPhoto = (i) => localMedia(slug, `post-${i + 1}`) || photo(`${slug}-post${i}`, 1080);
+  const prodPhoto = (i) =>
+    localMedia(slug, `prod-${String(i + 1).padStart(2, '0')}`) || photo(`${slug}-prod${i}`, 800);
 
   // --- owner ---
   const userId = uuid();
@@ -394,7 +419,7 @@ async function seedBusiness(client, spec, index, passwordHash) {
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$11)`,
     [
       userId, email, passwordHash, spec.name, spec.name.split(' ')[0], 'Demo', spec.phone,
-      photo(`${spec.slug}-avatar`, 400),
+      logoUrl,
       JSON.stringify({ client: { status: 'active' }, business: { status: 'active' } }),
       'business', now,
     ],
@@ -412,7 +437,7 @@ async function seedBusiness(client, spec, index, passwordHash) {
       index % 3 === 0, spec.featured,
       40 + ((index * 37) % 260), 120 + ((index * 91) % 900),
       (3.8 + ((index * 7) % 12) / 10).toFixed(2), 8 + ((index * 13) % 90),
-      photo(`${spec.slug}-logo`, 400), wide(`${spec.slug}-banner`), now,
+      logoUrl, bannerUrl, now,
     ],
   );
 
@@ -441,7 +466,7 @@ async function seedBusiness(client, spec, index, passwordHash) {
   const categoryId = uuid();
   await client.query(
     `INSERT INTO "Category" (id, "businessId", name, "iconUrl", "productCount") VALUES ($1,$2,$3,$4,$5)`,
-    [categoryId, businessId, 'Destacados', photo(`${spec.slug}-cat`, 200), spec.products.length],
+    [categoryId, businessId, 'Destacados', logoUrl, spec.products.length],
   );
 
   const productIds = [];
@@ -449,7 +474,7 @@ async function seedBusiness(client, spec, index, passwordHash) {
     const [pname, price] = spec.products[i];
     const productId = uuid();
     productIds.push({ id: productId, name: pname, price });
-    const thumb = photo(`${spec.slug}-prod${i}`, 800);
+    const thumb = prodPhoto(i);
     const onSale = i % 4 === 0;
     await client.query(
       `INSERT INTO "Product" (id, "businessId", "categoryId", name, description, price, "discountPrice",
@@ -460,7 +485,7 @@ async function seedBusiness(client, spec, index, passwordHash) {
         productId, businessId, categoryId, pname,
         `${pname} de ${spec.name}. Preparado el mismo día.`,
         price.toFixed(2), onSale ? (price * 0.85).toFixed(2) : null, onSale,
-        thumb, JSON.stringify([thumb, photo(`${spec.slug}-prod${i}-b`, 800)]),
+        thumb, JSON.stringify([thumb, prodPhoto((i + 1) % spec.products.length)]),
         i % 7 !== 0, i < 2,
         20 + ((i * 31) % 400), (i * 5) % 40, (i * 11) % 120,
         (4.0 + ((i * 3) % 10) / 10).toFixed(2), 3 + ((i * 7) % 40), now,
@@ -472,14 +497,14 @@ async function seedBusiness(client, spec, index, passwordHash) {
   const postIds = [];
   for (let i = 0; i < 4; i++) {
     const postId = uuid();
-    const url = photo(`${spec.slug}-post${i}`, 1080);
+    const url = postPhoto(i);
     // Tag a couple of real products so the tagged-products sheet has content
     const tagged = productIds.slice(i, i + 2).map((p) => ({
       productId: p.id,
       name: p.name,
       price: String(p.price),
       mediaIndex: 0,
-      thumbnailUrl: photo(`${spec.slug}-prod${productIds.indexOf(p)}`, 800),
+      thumbnailUrl: prodPhoto(productIds.indexOf(p)),
     }));
     const publishedAt = new Date(now.getTime() - (index * 5 + i) * 3600 * 1000);
 
@@ -502,7 +527,7 @@ async function seedBusiness(client, spec, index, passwordHash) {
 
   const videoPostId = uuid();
   const videoUrl = VIDEO_POOL[index % VIDEO_POOL.length];
-  const videoThumb = photo(`${spec.slug}-video`, 1080);
+  const videoThumb = localMedia(slug, 'video-thumb') || postPhoto(0);
   const videoPublishedAt = new Date(now.getTime() - index * 5 * 3600 * 1000 - 1800 * 1000);
   await client.query(
     `INSERT INTO "Post" (id, "businessId", "userId", type, title, caption, media, "thumbnailUrl",
@@ -516,7 +541,7 @@ async function seedBusiness(client, spec, index, passwordHash) {
       JSON.stringify([spec.category, 'video']),
       JSON.stringify(productIds.slice(0, 2).map((p, i2) => ({
         productId: p.id, name: p.name, price: String(p.price), mediaIndex: 0,
-        thumbnailUrl: photo(`${spec.slug}-prod${i2}`, 800),
+        thumbnailUrl: prodPhoto(i2),
       }))),
       videoPublishedAt,
     ],
@@ -528,6 +553,7 @@ async function seedBusiness(client, spec, index, passwordHash) {
 
 async function main() {
   const cleanOnly = process.argv.includes('--clean');
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   const client = await pool.connect();
 
   try {
@@ -573,4 +599,9 @@ async function main() {
   }
 }
 
-main();
+// Exported so the media organiser can reuse the catalogue without duplicating it
+module.exports = { BUSINESSES, DEMO_EMAIL_DOMAIN, DEMO_PASSWORD };
+
+if (require.main === module) {
+  main();
+}
