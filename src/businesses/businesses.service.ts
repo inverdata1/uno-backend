@@ -51,7 +51,7 @@ export class BusinessesService {
     return business;
   }
 
-  async getProfile(businessId: string) {
+  async getProfile(businessId: string, userId?: string) {
     const business = await this.prisma.business.findUnique({
       where: { id: businessId },
       include: {
@@ -69,10 +69,24 @@ export class BusinessesService {
       throw new UnauthorizedException('Business not found');
     }
 
+    let isFollowing = false;
+    if (userId) {
+      const followRecord = await (this.prisma as any).follow.findUnique({
+        where: {
+          followerId_followingId: {
+            followerId: userId,
+            followingId: businessId,
+          }
+        }
+      });
+      isFollowing = !!followRecord;
+    }
+
     const mainBranch = business.branches?.[0];
 
     return {
       ...business,
+      isFollowing,
       address: mainBranch?.address ? (mainBranch.address as any).street : null,
       coordinates: mainBranch?.latitude && mainBranch?.longitude ? {
         latitude: mainBranch.latitude,
@@ -81,6 +95,7 @@ export class BusinessesService {
       phone: mainBranch?.phone || null,
       productsCount: business._count?.products || 0,
       postsCount: business._count?.posts || 0,
+      followersCount: business._count?.followers || business.followersCount || 0,
     };
   }
 

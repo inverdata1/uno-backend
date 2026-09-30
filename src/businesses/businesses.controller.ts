@@ -24,8 +24,9 @@ export class BusinessesController {
 
   @Get('profile')
   getProfile(@Req() req) {
-    const businessId = req.query.businessId;
-    return this.businessesService.getProfile(businessId as string);
+    const businessId = req.query.businessId as string;
+    const userId = req.query.userId as string;
+    return this.businessesService.getProfile(businessId, userId);
   }
 
   @Patch('profile')
