@@ -69,6 +69,15 @@ export class UsersService {
   async getProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
+      include: {
+        _count: {
+          select: {
+            follows: true,
+            favorites: true,
+            orders: true,
+          }
+        }
+      }
     });
 
     if (!user) {
@@ -76,7 +85,12 @@ export class UsersService {
     }
 
     const { password, ...result } = user;
-    return result;
+    return {
+      ...result,
+      followingCount: user._count?.follows || 0,
+      favoritesCount: user._count?.favorites || 0,
+      ordersCount: user._count?.orders || 0,
+    };
   }
 
   async getPreferences(userId: string) {
