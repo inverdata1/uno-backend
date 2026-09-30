@@ -213,6 +213,44 @@ export class BusinessesService {
     return follows.map((f: any) => f.followingId);
   }
 
+  async getFollowedBusinesses(userId: string) {
+    if (!userId) return [];
+    const follows = await (this.prisma as any).follow.findMany({
+      where: { followerId: userId },
+      select: {
+        followingId: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (follows.length === 0) return [];
+
+    const businessIds = follows.map((f: any) => f.followingId);
+    const businesses = await (this.prisma as any).business.findMany({
+      where: { id: { in: businessIds }, isActive: true },
+      include: {
+        categories: true,
+        _count: {
+          select: {
+            products: true,
+            posts: true,
+            followers: true,
+          },
+        },
+      },
+    });
+
+    const followMap = new Map(follows.map((f: any) => [f.followingId, f.createdAt]));
+    return businesses
+      .map((b: any) => ({
+        ...b,
+        isFollowing: true,
+        followedAt: followMap.get(b.id),
+      }))
+      .sort((a: any, b: any) => new Date(b.followedAt).getTime() - new Date(a.followedAt).getTime());
+  }
+
   async toggleFollow(userId: string, businessId: string) {
     if (!userId || !businessId) return { isFollowing: false };
 

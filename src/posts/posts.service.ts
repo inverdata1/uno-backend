@@ -95,11 +95,21 @@ export class PostsService {
       return posts.map(post => ({ ...post, isLiked: false }));
     }
 
-    const userLikes = await this.prisma.userInteraction.findMany({
-      where: { userId, action: 'LIKE_POST' },
-      select: { postId: true },
-    });
-    const likedPostIds = new Set(userLikes.map(l => l.postId));
+    const [userLikes, userFavorites] = await Promise.all([
+      this.prisma.userInteraction.findMany({
+        where: { userId, action: 'LIKE_POST' },
+        select: { postId: true },
+      }),
+      this.prisma.favorite.findMany({
+        where: { userId, entityType: 'post' },
+        select: { entityId: true },
+      }),
+    ]);
+
+    const likedPostIds = new Set([
+      ...userLikes.map((l: any) => l.postId),
+      ...userFavorites.map((f: any) => f.entityId),
+    ]);
 
     return posts.map(post => ({
       ...post,
@@ -142,31 +152,47 @@ export class PostsService {
         where: { id },
         data: { likeCount: { increment: 1 } },
       });
-      return { isLiked: true, likeCount: updated.likeCount };
+      return { isLiked: true, isFavorite: true, likeCount: updated.likeCount };
     }
 
-    const existing = await this.prisma.userInteraction.findFirst({
-      where: { userId, postId: id, action: 'LIKE_POST' },
-    });
+    const [existingInteraction, existingFavorite] = await Promise.all([
+      this.prisma.userInteraction.findFirst({
+        where: { userId, postId: id, action: 'LIKE_POST' },
+      }),
+      this.prisma.favorite.findFirst({
+        where: { userId, entityId: id, entityType: 'post' },
+      }),
+    ]);
 
-    if (existing) {
-      await this.prisma.userInteraction.delete({ where: { id: existing.id } });
+    if (existingInteraction || existingFavorite) {
+      if (existingInteraction) {
+        await this.prisma.userInteraction.delete({ where: { id: existingInteraction.id } }).catch(() => null);
+      }
+      if (existingFavorite) {
+        await this.prisma.favorite.delete({ where: { id: existingFavorite.id } }).catch(() => null);
+      }
       const current = await this.prisma.post.findUnique({ where: { id } });
       const newCount = Math.max(0, (current?.likeCount || 1) - 1);
       const updated = await this.prisma.post.update({
         where: { id },
         data: { likeCount: newCount },
       });
-      return { isLiked: false, likeCount: updated.likeCount };
+      return { isLiked: false, isFavorite: false, likeCount: updated.likeCount };
     } else {
-      await this.prisma.userInteraction.create({
-        data: { userId, action: 'LIKE_POST', postId: id },
-      });
+      await Promise.all([
+        this.prisma.userInteraction.create({
+          data: { userId, action: 'LIKE_POST', postId: id },
+        }).catch(() => null),
+        this.prisma.favorite.create({
+          data: { userId, entityId: id, entityType: 'post' },
+        }).catch(() => null),
+      ]);
+
       const updated = await this.prisma.post.update({
         where: { id },
         data: { likeCount: { increment: 1 } },
       });
-      return { isLiked: true, likeCount: updated.likeCount };
+      return { isLiked: true, isFavorite: true, likeCount: updated.likeCount };
     }
   }
 
@@ -209,20 +235,12 @@ export class PostsService {
   }
 
   async toggleFavoritePost(userId: string, postId: string) {
-    const existing = await this.prisma.favorite.findFirst({
-      where: { userId, entityId: postId, entityType: 'post' },
-    });
-
-    if (existing) {
-      await this.prisma.favorite.delete({ where: { id: existing.id } });
-      return { isFavorite: false, message: 'Publicación eliminada de favoritos' };
-    } else {
-      await this.prisma.favorite.create({
-        data: { userId, entityId: postId, entityType: 'post' },
-      });
-      await this.recordInteraction({ userId, action: 'FAVORITE_POST', postId });
-      return { isFavorite: true, message: 'Publicación guardada en favoritos' };
-    }
+    const res = await this.like(postId, userId);
+    return {
+      isFavorite: res.isLiked,
+      likeCount: res.likeCount,
+      message: res.isLiked ? 'Publicación guardada en favoritos' : 'Publicación eliminada de favoritos',
+    };
   }
 
   async favoritePostProducts(userId: string, postId: string) {

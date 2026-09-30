@@ -16,11 +16,26 @@ export class ProductsService {
     return this.prisma.product.findMany({ where, include: { category: true, business: true } });
   }
 
-  findOne(id: string) {
-    return this.prisma.product.findUnique({
+  async findOne(id: string, userId?: string) {
+    const product = await this.prisma.product.findUnique({
       where: { id },
       include: { category: true, business: true },
     });
+
+    if (!product) return null;
+
+    let isFavorited = false;
+    if (userId) {
+      const fav = await this.prisma.favorite.findFirst({
+        where: { userId, entityId: id, entityType: 'product' },
+      });
+      isFavorited = !!fav;
+    }
+
+    return {
+      ...product,
+      isFavorited,
+    };
   }
 
   update(id: string, updateProductDto: any) {
@@ -41,12 +56,30 @@ export class ProductsService {
 
     if (existing) {
       await this.prisma.favorite.delete({ where: { id: existing.id } });
-      return { isFavorite: false, message: 'Producto eliminado de favoritos' };
+      const updated = await this.prisma.product.update({
+        where: { id: productId },
+        data: { favoriteCount: { decrement: 1 } },
+      }).catch(() => null);
+
+      return {
+        isFavorite: false,
+        favoriteCount: updated?.favoriteCount || 0,
+        message: 'Producto eliminado de favoritos'
+      };
     } else {
       await this.prisma.favorite.create({
         data: { userId, entityId: productId, entityType: 'product' },
       });
-      return { isFavorite: true, message: 'Producto guardado en favoritos' };
+      const updated = await this.prisma.product.update({
+        where: { id: productId },
+        data: { favoriteCount: { increment: 1 } },
+      }).catch(() => null);
+
+      return {
+        isFavorite: true,
+        favoriteCount: updated?.favoriteCount || 1,
+        message: 'Producto guardado en favoritos'
+      };
     }
   }
 
