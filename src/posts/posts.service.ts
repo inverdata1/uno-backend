@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -15,8 +15,8 @@ export class PostsService {
     });
   }
 
-  async findByBusiness(businessId: string) {
-    return this.prisma.post.findMany({
+  async findByBusiness(businessId: string, userId?: string) {
+    const posts = await this.prisma.post.findMany({
       where: {
         businessId,
         isActive: true,
@@ -34,6 +34,68 @@ export class PostsService {
         }
       }
     });
+
+    if (!userId) {
+      return posts.map(post => ({ ...post, isLiked: false }));
+    }
+
+    const [userLikes, userFavorites] = await Promise.all([
+      this.prisma.userInteraction.findMany({
+        where: { userId, action: 'LIKE_POST' },
+        select: { postId: true },
+      }),
+      this.prisma.favorite.findMany({
+        where: { userId, entityType: 'post' },
+        select: { entityId: true },
+      }),
+    ]);
+
+    const likedPostIds = new Set([
+      ...userLikes.map((l: any) => l.postId),
+      ...userFavorites.map((f: any) => f.entityId),
+    ]);
+
+    return posts.map(post => ({
+      ...post,
+      isLiked: likedPostIds.has(post.id),
+    }));
+  }
+
+  async findOne(id: string, userId?: string) {
+    const post = await this.prisma.post.findUnique({
+      where: { id },
+      include: {
+        business: {
+          select: {
+            id: true,
+            businessName: true,
+            logoUrl: true,
+          }
+        }
+      }
+    });
+
+    if (!post) {
+      throw new NotFoundException(`Post with ID ${id} not found`);
+    }
+
+    if (!userId) {
+      return { ...post, isLiked: false };
+    }
+
+    const [userLike, userFavorite] = await Promise.all([
+      this.prisma.userInteraction.findFirst({
+        where: { userId, postId: id, action: 'LIKE_POST' },
+      }),
+      this.prisma.favorite.findFirst({
+        where: { userId, entityId: id, entityType: 'post' },
+      }),
+    ]);
+
+    return {
+      ...post,
+      isLiked: Boolean(userLike || userFavorite),
+    };
   }
 
   async findByProduct(productId: string) {
@@ -148,11 +210,7 @@ export class PostsService {
 
   async like(id: string, userId?: string) {
     if (!userId) {
-      const updated = await this.prisma.post.update({
-        where: { id },
-        data: { likeCount: { increment: 1 } },
-      });
-      return { isLiked: true, isFavorite: true, likeCount: updated.likeCount };
+      throw new BadRequestException('Debes iniciar sesión para dar me gusta o guardar en favoritos');
     }
 
     const [existingInteraction, existingFavorite] = await Promise.all([
@@ -165,17 +223,21 @@ export class PostsService {
     ]);
 
     if (existingInteraction || existingFavorite) {
-      if (existingInteraction) {
-        await this.prisma.userInteraction.delete({ where: { id: existingInteraction.id } }).catch(() => null);
-      }
-      if (existingFavorite) {
-        await this.prisma.favorite.delete({ where: { id: existingFavorite.id } }).catch(() => null);
-      }
-      const current = await this.prisma.post.findUnique({ where: { id } });
-      const newCount = Math.max(0, (current?.likeCount || 1) - 1);
+      await Promise.all([
+        this.prisma.userInteraction.deleteMany({
+          where: { userId, postId: id, action: 'LIKE_POST' },
+        }).catch(() => null),
+        this.prisma.favorite.deleteMany({
+          where: { userId, entityId: id, entityType: 'post' },
+        }).catch(() => null),
+      ]);
+
+      const actualCount = await this.prisma.favorite.count({
+        where: { entityId: id, entityType: 'post' },
+      });
       const updated = await this.prisma.post.update({
         where: { id },
-        data: { likeCount: newCount },
+        data: { likeCount: actualCount },
       });
       return { isLiked: false, isFavorite: false, likeCount: updated.likeCount };
     } else {
@@ -183,14 +245,29 @@ export class PostsService {
         this.prisma.userInteraction.create({
           data: { userId, action: 'LIKE_POST', postId: id },
         }).catch(() => null),
-        this.prisma.favorite.create({
-          data: { userId, entityId: id, entityType: 'post' },
+        this.prisma.favorite.upsert({
+          where: {
+            userId_entityId_entityType: {
+              userId,
+              entityId: id,
+              entityType: 'post',
+            },
+          },
+          create: {
+            userId,
+            entityId: id,
+            entityType: 'post',
+          },
+          update: {},
         }).catch(() => null),
       ]);
 
+      const actualCount = await this.prisma.favorite.count({
+        where: { entityId: id, entityType: 'post' },
+      });
       const updated = await this.prisma.post.update({
         where: { id },
-        data: { likeCount: { increment: 1 } },
+        data: { likeCount: actualCount },
       });
       return { isLiked: true, isFavorite: true, likeCount: updated.likeCount };
     }

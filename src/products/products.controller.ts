@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   Query,
+  Req,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -48,7 +49,13 @@ export class ProductsController {
   }
 
   @Post(':id/favorite')
-  toggleFavorite(@Param('id') id: string, @Body('userId') userId: string) {
+  toggleFavorite(
+    @Param('id') id: string,
+    @Body('userId') bodyUserId?: string,
+    @Query('userId') queryUserId?: string,
+    @Req() req?: any,
+  ) {
+    const userId = bodyUserId || queryUserId || req?.user?.sub || req?.user?.id;
     return this.productsService.toggleFavorite(userId, id);
   }
 

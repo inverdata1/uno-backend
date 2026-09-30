@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, Body, Delete, Patch, Query, Put } from '@nestjs/common';
+import { Controller, Get, Param, Post, Body, Delete, Patch, Query, Put, Req } from '@nestjs/common';
 import { PostsService } from './posts.service';
 
 @Controller('posts')
@@ -13,14 +13,14 @@ export class PostsController {
   @Get()
   findAll(@Query('businessId') businessId?: string, @Query('userId') userId?: string) {
     if (businessId) {
-      return this.postsService.findByBusiness(businessId);
+      return this.postsService.findByBusiness(businessId, userId);
     }
     return this.postsService.findAll(userId);
   }
 
   @Get('business/:businessId')
-  findByBusiness(@Param('businessId') businessId: string) {
-    return this.postsService.findByBusiness(businessId);
+  findByBusiness(@Param('businessId') businessId: string, @Query('userId') userId?: string) {
+    return this.postsService.findByBusiness(businessId, userId);
   }
 
   @Get('product')
@@ -28,8 +28,19 @@ export class PostsController {
     return this.postsService.findByProduct(productId);
   }
 
+  @Get(':id')
+  findOne(@Param('id') id: string, @Query('userId') userId?: string) {
+    return this.postsService.findOne(id, userId);
+  }
+
   @Patch(':id/like')
-  like(@Param('id') id: string, @Body('userId') userId?: string) {
+  like(
+    @Param('id') id: string,
+    @Body('userId') bodyUserId?: string,
+    @Query('userId') queryUserId?: string,
+    @Req() req?: any,
+  ) {
+    const userId = bodyUserId || queryUserId || req?.user?.sub || req?.user?.id;
     return this.postsService.like(id, userId);
   }
 
@@ -39,7 +50,13 @@ export class PostsController {
   }
 
   @Post(':id/favorite')
-  toggleFavoritePost(@Param('id') id: string, @Body('userId') userId: string) {
+  toggleFavoritePost(
+    @Param('id') id: string,
+    @Body('userId') bodyUserId?: string,
+    @Query('userId') queryUserId?: string,
+    @Req() req?: any,
+  ) {
+    const userId = bodyUserId || queryUserId || req?.user?.sub || req?.user?.id;
     return this.postsService.toggleFavoritePost(userId, id);
   }
 

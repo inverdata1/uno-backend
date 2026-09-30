@@ -229,10 +229,10 @@ export class UsersService {
 
     return {
       posts: posts
-        .map((p) => ({ ...p, favoritedAt: postFavoritedAt.get(p.id) }))
+        .map((p) => ({ ...p, isLiked: true, isFavorite: true, favoritedAt: postFavoritedAt.get(p.id) }))
         .sort((a, b) => (b.favoritedAt as Date).getTime() - (a.favoritedAt as Date).getTime()),
       products: products
-        .map((p) => ({ ...p, favoritedAt: productFavoritedAt.get(p.id) }))
+        .map((p) => ({ ...p, isFavorited: true, favoritedAt: productFavoritedAt.get(p.id) }))
         .sort((a, b) => (b.favoritedAt as Date).getTime() - (a.favoritedAt as Date).getTime()),
     };
   }

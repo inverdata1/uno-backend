@@ -50,34 +50,58 @@ export class ProductsService {
   }
 
   async toggleFavorite(userId: string, productId: string) {
+    if (!userId) {
+      throw new BadRequestException('Debes iniciar sesión para guardar productos en favoritos');
+    }
+
     const existing = await this.prisma.favorite.findFirst({
       where: { userId, entityId: productId, entityType: 'product' },
     });
 
     if (existing) {
-      await this.prisma.favorite.delete({ where: { id: existing.id } });
+      await this.prisma.favorite.deleteMany({
+        where: { userId, entityId: productId, entityType: 'product' },
+      });
+      const actualCount = await this.prisma.favorite.count({
+        where: { entityId: productId, entityType: 'product' },
+      });
       const updated = await this.prisma.product.update({
         where: { id: productId },
-        data: { favoriteCount: { decrement: 1 } },
+        data: { favoriteCount: actualCount },
       }).catch(() => null);
 
       return {
         isFavorite: false,
-        favoriteCount: updated?.favoriteCount || 0,
+        favoriteCount: updated?.favoriteCount ?? actualCount,
         message: 'Producto eliminado de favoritos'
       };
     } else {
-      await this.prisma.favorite.create({
-        data: { userId, entityId: productId, entityType: 'product' },
+      await this.prisma.favorite.upsert({
+        where: {
+          userId_entityId_entityType: {
+            userId,
+            entityId: productId,
+            entityType: 'product',
+          },
+        },
+        create: {
+          userId,
+          entityId: productId,
+          entityType: 'product',
+        },
+        update: {},
+      });
+      const actualCount = await this.prisma.favorite.count({
+        where: { entityId: productId, entityType: 'product' },
       });
       const updated = await this.prisma.product.update({
         where: { id: productId },
-        data: { favoriteCount: { increment: 1 } },
+        data: { favoriteCount: actualCount },
       }).catch(() => null);
 
       return {
         isFavorite: true,
-        favoriteCount: updated?.favoriteCount || 1,
+        favoriteCount: updated?.favoriteCount ?? actualCount,
         message: 'Producto guardado en favoritos'
       };
     }
