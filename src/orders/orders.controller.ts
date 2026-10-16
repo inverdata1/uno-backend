@@ -1,46 +1,81 @@
 import {
+  Body,
   Controller,
   Get,
-  Post,
-  Body,
-  Patch,
   Param,
-  Delete,
+  Patch,
+  Post,
   Query,
+  Req,
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { UpdateOrderDto } from './dto/update-order.dto';
 
+// Set by JwtAuthGuard from the verified token
+type AuthRequest = { user: { sub: string } };
+
+// The acting user always comes from the verified JWT, never from the request body
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Post()
-  create(@Body() createOrderDto: CreateOrderDto) {
-    return this.ordersService.create(createOrderDto);
+  create(@Req() req: AuthRequest, @Body() createOrderDto: CreateOrderDto) {
+    return this.ordersService.create(req.user.sub, createOrderDto);
   }
 
   @Get()
-  findAll(
-    @Query('businessId') businessId?: string,
+  findForBusiness(
+    @Req() req: AuthRequest,
+    @Query('businessId') businessId: string,
     @Query('status') status?: string,
   ) {
-    return this.ordersService.findAll(businessId, status);
+    return this.ordersService.findForBusiness(req.user.sub, businessId, status);
+  }
+
+  @Get('mine')
+  findMine(@Req() req: AuthRequest) {
+    return this.ordersService.findForClient(req.user.sub);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.ordersService.findOne(id);
+  findOne(@Req() req: AuthRequest, @Param('id') id: string) {
+    return this.ordersService.findOne(id, req.user.sub);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateOrderDto: UpdateOrderDto) {
-    return this.ordersService.update(id, updateOrderDto);
+  @Patch(':id/status')
+  updateStatus(
+    @Req() req: AuthRequest,
+    @Param('id') id: string,
+    @Body() body: { status: string; reason?: string },
+  ) {
+    return this.ordersService.updateStatus(
+      id,
+      req.user.sub,
+      body?.status,
+      body?.reason,
+    );
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.ordersService.remove(id);
+  @Patch(':id/payment')
+  updatePayment(
+    @Req() req: AuthRequest,
+    @Param('id') id: string,
+    @Body() body: { paymentStatus: string },
+  ) {
+    return this.ordersService.updatePayment(
+      id,
+      req.user.sub,
+      body?.paymentStatus,
+    );
+  }
+
+  @Patch(':id/delivery-location')
+  updateDeliveryLocation(
+    @Req() req: AuthRequest,
+    @Param('id') id: string,
+    @Body() body: { latitude: number; longitude: number; address?: string },
+  ) {
+    return this.ordersService.updateDeliveryLocation(id, req.user.sub, body);
   }
 }
