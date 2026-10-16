@@ -5,7 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 export class StoriesService {
   constructor(private prisma: PrismaService) {}
 
-  async create(data: { businessId: string; userId: string; mediaUrl: string; mediaType: string; duration?: number; tags?: any, expiresInHours?: number }) {
+  async create(data: { businessId: string; userId: string; mediaUrl: string; mediaType: string; thumbnailUrl?: string; duration?: number; tags?: any, expiresInHours?: number }) {
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + (data.expiresInHours || 24));
     

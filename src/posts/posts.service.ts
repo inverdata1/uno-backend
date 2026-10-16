@@ -194,7 +194,7 @@ export class PostsService {
     }
   }
 
-  async update(id: string, data: { title?: string; caption?: string; keywords?: any; media?: any; taggedProducts?: any; type?: string }) {
+  async update(id: string, data: { title?: string; caption?: string; keywords?: any; media?: any; taggedProducts?: any; type?: string; thumbnailUrl?: string }) {
     return this.prisma.post.update({
       where: { id },
       data: {
@@ -204,6 +204,7 @@ export class PostsService {
         media: data.media,
         taggedProducts: data.taggedProducts,
         type: data.type,
+        thumbnailUrl: data.thumbnailUrl,
       },
     });
   }
