@@ -186,10 +186,18 @@ export class AdminService {
 
     const activityPeriods = previousPeriods(period, MONTHS_OF_ACTIVITY);
     const activity = await Promise.all(
-      activityPeriods.map(async (p) => ({
-        period: p,
-        activeUsers: await this.activeUsers(p),
-      })),
+      activityPeriods.map(async (p) => {
+        const range = monthRange(p);
+        const createdInMonth = {
+          createdAt: { gte: range.start, lt: range.end },
+        };
+        const [activeUsers, newUsers, newBusinesses] = await Promise.all([
+          this.activeUsers(p),
+          this.prisma.user.count({ where: createdInMonth }),
+          this.prisma.business.count({ where: createdInMonth }),
+        ]);
+        return { period: p, activeUsers, newUsers, newBusinesses };
+      }),
     );
 
     return {
