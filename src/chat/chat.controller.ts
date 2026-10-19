@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Query, Param } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Query, Param, Req } from '@nestjs/common';
 import { ChatService } from './chat.service';
 
 @Controller('chat')
@@ -29,6 +29,17 @@ export class ChatController {
       conversationId,
       ...body,
     });
+  }
+
+  // The signed-in user's received messages (from the token, not the query)
+  @Get('notifications')
+  getNotifications(@Req() req: { user: { sub: string } }, @Query('limit') limit?: string) {
+    return this.chatService.getNotificationsForUser(req.user.sub, Number(limit) || 50);
+  }
+
+  @Patch('notifications/:id/read')
+  markNotificationRead(@Req() req: { user: { sub: string } }, @Param('id') id: string) {
+    return this.chatService.markNotificationRead(req.user.sub, id);
   }
 
   @Get('unread-count')

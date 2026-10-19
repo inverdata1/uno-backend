@@ -151,6 +151,47 @@ export class ChatService {
   }
 
   /**
+   * Messages a user has received (from businesses or other users), newest
+   * first, with who sent them. Powers the client's notifications screen.
+   */
+  async getNotificationsForUser(userId: string, limit = 50) {
+    const messages = await this.db.message.findMany({
+      where: { receiverId: userId, receiverType: 'user' },
+      orderBy: { createdAt: 'desc' },
+      take: Math.min(Math.max(Number(limit) || 50, 1), 100),
+    });
+
+    const senders = new Map<string, any>();
+    await Promise.all(
+      [...new Set(messages.map((m: any) => `${m.senderType}:${m.senderId}`))].map(async (key: string) => {
+        const [type, id] = key.split(':');
+        senders.set(key, await this.getParticipantInfo(id, type));
+      }),
+    );
+
+    return messages.map((m: any) => ({
+      id: m.id,
+      conversationId: m.conversationId,
+      content: m.content,
+      mediaUrl: m.mediaUrl,
+      isRead: m.isRead,
+      createdAt: m.createdAt,
+      sender: senders.get(`${m.senderType}:${m.senderId}`),
+    }));
+  }
+
+  /**
+   * Mark one received message as read; ignores messages sent to someone else.
+   */
+  async markNotificationRead(userId: string, messageId: string) {
+    const result = await this.db.message.updateMany({
+      where: { id: messageId, receiverId: userId },
+      data: { isRead: true },
+    });
+    return { success: result.count > 0 };
+  }
+
+  /**
    * Send a message
    */
   async sendMessage(dto: {
