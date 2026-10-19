@@ -164,6 +164,20 @@ export class OrdersService {
       throw new BadRequestException('Método de pago inválido');
     }
 
+    // Orders flow from a client to a business, never from a business to itself
+    const business = await this.prisma.business.findUnique({
+      where: { id: dto.businessId },
+      select: { ownerId: true, isActive: true },
+    });
+    if (!business || !business.isActive) {
+      throw new NotFoundException('Negocio no encontrado');
+    }
+    if (business.ownerId === clientId) {
+      throw new BadRequestException(
+        'No puedes hacer pedidos a tu propio negocio',
+      );
+    }
+
     const productIds = [...new Set(dto.items.map((i) => i.productId))];
     const products = await this.prisma.product.findMany({
       where: { id: { in: productIds }, businessId: dto.businessId },
