@@ -31,14 +31,14 @@ export type PaymentAccountInput = {
 } & Partial<Record<(typeof ACCOUNT_FIELDS)[number], string>>;
 
 // Months are counted in Venezuela time (UTC-4, no DST)
-const CARACAS_OFFSET_MS = -4 * 60 * 60 * 1000;
+export const CARACAS_OFFSET_MS = -4 * 60 * 60 * 1000;
 
-const toPeriod = (date: Date) => {
+export const toPeriod = (date: Date) => {
   const local = new Date(date.getTime() + CARACAS_OFFSET_MS);
   return `${local.getUTCFullYear()}-${String(local.getUTCMonth() + 1).padStart(2, '0')}`;
 };
 
-const round2 = (n: number) => Math.round(n * 100) / 100;
+export const round2 = (n: number) => Math.round(n * 100) / 100;
 
 @Injectable()
 export class PaymentsService {

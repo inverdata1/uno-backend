@@ -23,6 +23,8 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { CommentsModule } from './comments/comments.module';
 import { ChatModule } from './chat/chat.module';
 import { PaymentsModule } from './payments/payments.module';
+import { ActivityService } from './activity/activity.service';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -46,6 +48,7 @@ import { PaymentsModule } from './payments/payments.module';
     CommentsModule,
     ChatModule,
     PaymentsModule,
+    AdminModule,
     ServeStaticModule.forRoot({
       rootPath: join(process.cwd(), 'uploads'),
       serveRoot: '/uploads',
@@ -54,6 +57,7 @@ import { PaymentsModule } from './payments/payments.module';
   controllers: [AppController],
   providers: [
     AppService,
+    ActivityService,
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,

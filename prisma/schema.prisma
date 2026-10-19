@@ -24,6 +24,7 @@ model User {
   preferences         Json?
   userTypes           Json?      // Guarda los estados de cada rol (client, business, delivery)
   currentUserType     String?
+  role                String     @default("user") // user | admin (super user dashboard)
   currentBusinessId   String?
   currentBusiness     Business?  @relation("UserCurrentBusiness", fields: [currentBusinessId], references: [id])
   currentBranchId     String?
@@ -40,6 +41,7 @@ model User {
   follows             Follow[]
   clientOrders        Order[]    @relation("ClientOrders")
   comments            Comment[]
+  activityDays        UserActivityDay[]
 }
 
 model Business {
@@ -370,4 +372,16 @@ model CommissionPayment {
   updatedAt        DateTime   @updatedAt
 
   @@unique([businessId, period])
+}
+
+// One row per user per day they used the app, to count monthly active users
+model UserActivityDay {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  day       String   // YYYY-MM-DD (Venezuela time)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, day])
+  @@index([day])
 }

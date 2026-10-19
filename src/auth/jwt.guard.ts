@@ -9,6 +9,7 @@ import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 import { IS_PUBLIC_KEY } from './public.decorator';
 import { ConfigService } from '@nestjs/config';
+import { ActivityService } from '../activity/activity.service';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -16,6 +17,7 @@ export class JwtAuthGuard implements CanActivate {
     private jwtService: JwtService,
     private reflector: Reflector,
     private configService: ConfigService,
+    private activityService: ActivityService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -48,6 +50,9 @@ export class JwtAuthGuard implements CanActivate {
         'Acceso denegado: Token inválido o expirado',
       );
     }
+
+    // Counts towards monthly active users (once per user per day)
+    this.activityService.touch(request['user']?.sub);
 
     return true;
   }
