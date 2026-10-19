@@ -142,11 +142,21 @@ export class UsersService {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
-    // Since the API receives specific fields, update them
-    return this.prisma.user.update({
+    // Never let a profile edit change privileges, credentials or identity
+    const {
+      role: _role,
+      password: _password,
+      id: _id,
+      email: _email,
+      ...safeData
+    } = data || {};
+
+    const updated = await this.prisma.user.update({
       where: { id: userId },
-      data,
+      data: safeData,
     });
+    const { password: _hash, ...result } = updated;
+    return result;
   }
 
   async getUserTypes(userId: string) {

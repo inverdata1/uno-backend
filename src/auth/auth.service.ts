@@ -29,7 +29,8 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(data.password, salt);
 
     // Filter out password and businessData from the original payload
-    const { password, businessData, ...rest } = data;
+    // `role` is only ever set by the create-admin script, never by a signup
+    const { password, businessData, role: _role, ...rest } = data;
 
     // Create user (and optionally business) atomically using a transaction
     const user = await this.prisma.$transaction(async (tx) => {
